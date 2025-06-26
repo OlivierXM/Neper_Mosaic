@@ -202,6 +202,23 @@ class ModelGeometry():
 
             gmsh.model.addPhysicalGroup(self.dim, updated_tags, group_tag)
 
+        num_lines = len(self.line_tags)
+        for tag in self.line_tags:
+            group_tag = tag - self.index * num_lines
+
+            existing_groups = [
+                tag for (dim, tag) in gmsh.model.getPhysicalGroups(dim=self.dim-1)]
+
+            if group_tag in existing_groups:
+                tags = gmsh.model.getEntitiesForPhysicalGroup(
+                    self.dim-1, group_tag)
+                gmsh.model.removePhysicalGroups([(self.dim-1, group_tag)])
+                updated_tags = np.hstack((tags, tag))
+            else:
+                updated_tags = [tag]
+                
+            gmsh.model.addPhysicalGroup(self.dim-1, updated_tags, group_tag)
+
         gmsh.model.occ.synchronize()
 
     @staticmethod
@@ -658,6 +675,7 @@ def main(input_file,
 
 
     gmsh.initialize()
+    gmsh.option.setNumber("Geometry.OCCParallel", 1)
 
     gmsh.option.setNumber("General.Terminal", int(show_gmsh_output))
 
@@ -676,7 +694,7 @@ def main(input_file,
     gmsh.option.setNumber("Mesh.MeshSizeMax", element_size)
     
     gmsh.model.mesh.generate(dim)
-    
+
     if ciGen:
         gmsh.option.setNumber("Mesh.Format", 2) 
         gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
@@ -686,8 +704,7 @@ def main(input_file,
         # make sure the output directory exists
         file_path = Path(file)
         file_path.resolve().parent.mkdir(exist_ok=True)
-        
-        gmsh.write(str(file))
+        gmsh.write(file)
 
     if show_gui:
         if dim == 3:
@@ -707,4 +724,4 @@ def main(input_file,
 
         gmsh.fltk.run()
 
-    gmsh.finalize()
+    # gmsh.finalize()
